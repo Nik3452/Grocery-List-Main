@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Grocery Page</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+</head>
+<div id="infoDiv">
+    <table id="groceryTable" border=1>
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Quantity</th>
+            <th>Category</th>
+        </tr>
+    </table>
+    <label> Select Category:
+        <select id="filterSelection">
+            <option value="All">All</option>
+        </select>
+    </label>
+</div>
+<body>
+<section id="DBOperationsSection">
+    <div id="additionToDB">
+        <h2>Add Grocery Item</h2>
+        <label> Grocery Item Name:
+            <input type="text" id="nameInput">
+        </label>
+        <label> Grocery Item Quantity:
+            <input type="text" id="quantityInput">
+        </label>
+        <label> Grocery Category Name:
+            <input type="text" id="categoryInput">
+        </label>
+        <button id="addBtn">Add Grocery Item</button>
+    </div>
+    <div id="removeFromDB">
+        <h2>Remove Grocery Item</h2>
+        <label> Grocery Item ID:
+            <input type="text" id="idInput">
+        </label>
+        <label> Grocery Category:
+            <input type="text" id="categoryIDInput">
+        </label>
+        <button id="removeBtn">Remove Grocery Item</button>
+    </div>
+    <div id="editItemDB">
+        <h2>Edit Grocery Item</h2>
+        <label> Grocery Item ID:
+            <input type="text" id="idEditInput">
+        </label>
+        <label> Grocery Item Name:
+            <input type="text" id="nameEditInput">
+        </label>
+        <label> Grocery Item Quantity:
+            <input type="number" id="quantityEditInput">
+        </label>
+        <label> Grocery Item Category:
+            <input type="text" id="categoryEditInput">
+        </label>
+        <button id="editBtn">Edit Grocery Item</button>
+    </div>
+</section>
+</body>
+<script>
+    $(document).ready(function() {
+        $.ajaxSetup({
+            async: true
+        });
+        $.ajax({
+            type: "get", url: "http://localhost:8080/api/grocery", async:false,
+            success: function (data) {
+                for(let i = 0; i < data.length; i++) {
+                    $('#groceryTable').append(`<tr><td>${data[i].id}</td><td>${data[i].name}</td><td>${data[i].quantity}</td><td>${data[i].category}</td></tr>`)
+                }
+            },
+            error: function (request, status, error) {
+                alert(request.responseText + " | " + status + " | " + error);
+            }
+        });
+        $.get("http://localhost:8080/api/grocery/categories" ,(data, status) => {
+            for(let i = 0; i < data.length; i++) {
+                $('select').append(`<option value="${data[i]}">${data[i]}</option>`)
+            }
+        });
+        $.get("http://localhost:8080/api/grocery/quantity" ,(data, status) => {
+            $('#infoDiv').append("<p>Total Quantity of all items: " + data + "</p>")
+        })
+        $('#addBtn').click(function() {
+            let name = $('#nameInput').val()
+            let category = $('#categoryInput').val()
+            let quantity = $('#quantityInput').val()
+            let body = {
+                "name": name,
+                "category": category,
+                "quantity": quantity
+            }
+            $.ajax({
+                type: 'post',
+                url: 'http://localhost:8080/api/grocery',
+                data: JSON.stringify(body), // stringyfy before passing
+                dataType: 'json', // payload is json
+                contentType : 'application/json',
+                success: function (data) {
+                    console.log(data);
+                    window.location.reload()
+                }
+            });
+        })
+        $("#removeBtn").click(function() {
+            if($('#idInput').val() === "") {
+                if($('#categoryIDInput').val() === "") {
+                    alert("Please enter an ID or Category")
+                    return
+                } else {
+                    let category = $('#categoryIDInput').val()
+                    $.ajax({
+                        url: `http://localhost:8080/api/grocery/category/${category}`,
+                        type: 'DELETE',
+                        success: function(result) {
+                            window.location.reload()
+                        }
+                    });
+                }
+            } else {
+                let id = $('#idInput').val()
+                $.ajax({
+                    url: `http://localhost:8080/api/grocery/${id}`,
+                    type: 'DELETE',
+                    success: function(result) {
+                        window.location.reload()
+                    }
+                });
+            }
+        })
+        $('#editBtn').click(function() {
+            let id = $('#idEditInput').val()
+            let name = $('#nameEditInput').val()
+            let category = $('#categoryEditInput').val()
+            let quantity = $('#quantityEditInput').val()
+            let body = {
+                "name": name,
+                "category": category,
+                "quantity": quantity
+            }
+            $.ajax({
+                type: 'put',
+                url: `http://localhost:8080/api/grocery/${id}`,
+                data: JSON.stringify(body), // stringyfy before passing
+                dataType: 'json', // payload is json
+                contentType : 'application/json',
+                success: function (data) {
+                    console.log(data);
+                    window.location.reload()
+                }
+            });
+        })
+        $("#filterSelection").change(function() {
+            if ($("#filterSelection").val() !== "All") {
+                let category = $('#filterSelection').val()
+                $.get(`http://localhost:8080/api/grocery/category/${category}`, (data, status) => {
+                    $('#groceryTable').empty()
+                    $('#groceryTable').append(`<tr><th>ID</th><th>Name</th><th>Quantity</th><th>Category</th></tr>`)
+                    for (let i = 0; i < data.length; i++) {
+                        $('#groceryTable').append(`<tr><td>${data[i].id}</td><td>${data[i].name}</td><td>${data[i].quantity}</td><td>${data[i].category}</td></tr>`)
+                    }
+                });
+            } else {
+                $.get("http://localhost:8080/api/grocery" ,(data, status) => {
+                    $('#groceryTable').empty()
+                    $('#groceryTable').append(`<tr><th>ID</th><th>Name</th><th>Quantity</th><th>Category</th></tr>`)
+                    for(let i = 0; i < data.length; i++) {
+                        $('#groceryTable').append(`<tr><td>${data[i].id}</td><td>${data[i].name}</td><td>${data[i].quantity}</td><td>${data[i].category}</td></tr>`)
+                    }
+                });
+            }
+        })
+    })
+</script>
+</html>
